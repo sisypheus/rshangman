@@ -17,27 +17,65 @@ fn get_word() -> String {
     return res[0].as_str().unwrap().to_string();
 }
 
-fn get_word_with_guesses(word: &str, guesses: &Vec<char>, new_guess: char) -> (String, bool) {
-    let mut word_with_guesses = String::new();
-    let mut correct = false;
+fn fill_word_with_guesses(word: &String, guesses: &Vec<char>, guessed_word: &mut String) {
+    guessed_word.clear();
     for c in word.chars() {
         if guesses.contains(&c) {
-            word_with_guesses.push(c);
-            if new_guess.eq(&c) {
-                correct = true;
-            }
+            guessed_word.push(c);
         } else {
-            word_with_guesses.push('_');
+            guessed_word.push('_');
         }
     }
-    return (word_with_guesses, correct);
+}
+
+fn win_check(guess: &String) -> bool {
+    if guess.contains("_") {
+        return false;
+    }
+    return true;
+}
+
+fn handle_continue() {
+    println!("Would you like to continue? (y/n)");
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    if input.trim() == "y" {
+        let word = get_word();
+        let guesses: Vec<char> = Vec::new();
+        game_loop(&word, guesses);
+    } else {
+        println!("Thanks for playing!");
+        std::process::exit(0);
+    }
+}
+
+fn check_guess_correctness(guess: char, word: &String, guesses: &Vec<char>, mistakes: &mut u16, guessed_word: &mut String) {
+    if word.contains(guess) {
+        fill_word_with_guesses(word, guesses, guessed_word);
+    } else {
+        println!("Incorrect guess!");
+        *mistakes += 1;
+    }
+}
+
+fn check_end_game(mistakes: u16, guess: &String, word: &String) {
+    if mistakes == 6 {
+        println!("You lost! The word was {}", word);
+    } else if win_check(guess) {
+        println!("You won!");
+    } else {
+        return;
+    }
+    handle_continue();
 }
 
 fn game_loop(word: &String, mut guesses: Vec<char>) {
     let mut mistakes: u16 = 0;
+    let mut guessed = word.chars().map(|_| '_').collect::<String>();
 
     loop {
-        // println!("{}", get_word_with_guesses(word, &guesses).0);
+        println!("{}", guessed);
+        println!("{} chances left", 6 - mistakes);
         println!("Guess a letter:");
         let mut input = String::new();
         io::stdin()
@@ -47,20 +85,9 @@ fn game_loop(word: &String, mut guesses: Vec<char>) {
             println!("Please enter only one character");
             continue;
         }
-        guesses.push(input.chars().nth(0).unwrap());
-        let test = get_word_with_guesses(word, &guesses, input.chars().nth(0).unwrap());
-        if test.0.eq(word) {
-            println!("You won!");
-            break;
-        } else if !test.1 {
-           mistakes += 1; 
-        } else {
-            println!("{}", test.0);
-        }
-        println!("Mistakes: {}", mistakes);
-        if mistakes == 6 {
-            println!("You lost!");
-            break;
-        }
+        let guess = input.chars().nth(0).expect("Failed to get character");
+        guesses.push(guess);
+        check_guess_correctness(guess, word, &mut guesses, &mut mistakes, &mut guessed);
+        check_end_game(mistakes, &guessed, word);
     }
 }
